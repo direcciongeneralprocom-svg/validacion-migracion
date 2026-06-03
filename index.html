@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Validación de Migración</title>
-<!-- SheetJS para leer Excel en el navegador -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -29,150 +28,96 @@ header .subtitle { font-size: .8rem; opacity: .75; margin-top: 2px; }
 .card-title {
   font-size: .8rem; font-weight: 700; color: #1a3a5c;
   text-transform: uppercase; letter-spacing: .07em;
-  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+  margin-bottom: 20px;
 }
 
-/* ── File upload ── */
 .files-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
 .drop-zone {
   border: 2px dashed #c5d3e0; border-radius: 10px;
-  padding: 26px 20px; text-align: center; cursor: pointer;
+  padding: 22px 16px; text-align: center; cursor: pointer;
   transition: all .2s; position: relative; background: #fafbfc;
 }
-.drop-zone:hover,
-.drop-zone.drag-over { border-color: #1a3a5c; background: #f0f5fb; }
-.drop-zone.has-file  { border-color: #27ae60; background: #f0faf4; }
-.drop-zone input[type=file] {
-  position: absolute; inset: 0; opacity: 0;
-  cursor: pointer; width: 100%; height: 100%;
+.drop-zone:hover, .drop-zone.drag-over { border-color: #1a3a5c; background: #f0f5fb; }
+.drop-zone.has-file { border-color: #27ae60; background: #f0faf4; }
+.drop-zone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+.drop-zone .dz-icon { font-size: 2rem; margin-bottom: 6px; }
+.drop-zone .dz-tag { display: inline-block; font-size: .7rem; font-weight: 700; background: #e8f0fe; color: #1a3a5c; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px; }
+.drop-zone .dz-hint { font-size: .78rem; color: #777; }
+.drop-zone .dz-name { font-size: .88rem; font-weight: 600; color: #1a3a5c; margin-top: 6px; word-break: break-all; }
+.drop-zone .dz-cols { font-size: .7rem; color: #999; margin-top: 4px; }
+
+/* Sheet + row config */
+.file-config { margin-top: 12px; display: none; border-top: 1px solid #eef; padding-top: 12px; }
+.file-config label { font-size: .75rem; color: #555; font-weight: 600; display: block; margin-bottom: 4px; }
+.file-config select, .file-config input[type=number] {
+  width: 100%; border: 1px solid #d0dae6; border-radius: 6px;
+  padding: 7px 10px; font-size: .85rem; margin-bottom: 10px; background: #fff;
 }
-.drop-zone .dz-icon { font-size: 2.4rem; margin-bottom: 8px; }
-.drop-zone .dz-tag {
-  display: inline-block; font-size: .7rem; font-weight: 700;
-  background: #e8f0fe; color: #1a3a5c;
-  padding: 3px 10px; border-radius: 20px; margin-bottom: 8px;
-}
-.drop-zone .dz-hint { font-size: .8rem; color: #777; }
-.drop-zone .dz-name { font-size: .9rem; font-weight: 600; color: #1a3a5c; margin-top: 6px; word-break: break-all; }
-.drop-zone .dz-cols { font-size: .72rem; color: #999; margin-top: 4px; }
+.file-config select:focus, .file-config input:focus { outline: none; border-color: #1a3a5c; }
 
 .btn-row { margin-top: 22px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
 .btn {
   display: inline-flex; align-items: center; gap: 8px;
   background: #1a3a5c; color: #fff; border: none;
   padding: 12px 28px; border-radius: 8px;
-  font-size: .95rem; font-weight: 600; cursor: pointer;
-  transition: background .2s; letter-spacing: .02em;
+  font-size: .95rem; font-weight: 600; cursor: pointer; transition: background .2s;
 }
 .btn:hover:not(:disabled) { background: #245080; }
 .btn:disabled { background: #b0bec5; cursor: not-allowed; }
 .btn.secondary { background: #e8f0fe; color: #1a3a5c; }
 .btn.secondary:hover:not(:disabled) { background: #d0e0f8; }
-
 #spinner { display: none; font-size: .88rem; color: #555; }
 
-/* ── Summary stats ── */
 .stats { display: flex; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
-.stat {
-  flex: 1; min-width: 120px; border-radius: 10px;
-  padding: 16px 20px; text-align: center;
-}
+.stat { flex: 1; min-width: 120px; border-radius: 10px; padding: 16px 20px; text-align: center; }
 .stat .num { font-size: 2.2rem; font-weight: 700; line-height: 1; }
 .stat .lbl { font-size: .72rem; margin-top: 4px; text-transform: uppercase; letter-spacing: .05em; }
 .stat.s-total { background: #e8f0fe; color: #1a3a5c; }
 .stat.s-ok    { background: #eafaf1; color: #1e8449; }
 .stat.s-err   { background: #fdecea; color: #c0392b; }
 
-/* ── Table ── */
 .tbl-wrap { max-height: 500px; overflow-y: auto; border-radius: 8px; border: 1px solid #e0e7ef; }
 table { width: 100%; border-collapse: collapse; font-size: .85rem; }
-thead th {
-  background: #1a3a5c; color: #fff;
-  padding: 11px 14px; text-align: left;
-  font-weight: 600; position: sticky; top: 0; z-index: 1;
-  white-space: nowrap;
-}
+thead th { background: #1a3a5c; color: #fff; padding: 11px 14px; text-align: left; font-weight: 600; position: sticky; top: 0; z-index: 1; white-space: nowrap; }
 tbody tr { border-bottom: 1px solid #f0f2f5; transition: background .12s; }
 tbody tr:last-child { border-bottom: none; }
 tbody tr:hover { background: #f7f9fb; }
 tbody td { padding: 10px 14px; vertical-align: middle; }
 
-.badge {
-  display: inline-block; padding: 4px 14px;
-  border-radius: 20px; font-size: .8rem; font-weight: 700;
-  letter-spacing: .04em; white-space: nowrap;
-}
+.badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: .8rem; font-weight: 700; letter-spacing: .04em; white-space: nowrap; }
 .badge.ok  { background: #27ae60; color: #fff; }
 .badge.err { background: #e74c3c; color: #fff; }
-
 .cell-err { color: #c0392b; font-weight: 600; }
 .err-item { font-size: .76rem; color: #c0392b; display: flex; align-items: center; gap: 4px; }
 .diff-val { font-size: .72rem; color: #888; font-style: italic; }
 
-/* ── Filter bar ── */
 .filter-bar { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
-.filter-bar input {
-  border: 1px solid #d0dae6; border-radius: 7px;
-  padding: 8px 12px; font-size: .85rem; flex: 1; min-width: 180px;
-  outline: none;
-}
+.filter-bar input { border: 1px solid #d0dae6; border-radius: 7px; padding: 8px 12px; font-size: .85rem; flex: 1; min-width: 180px; outline: none; }
 .filter-bar input:focus { border-color: #1a3a5c; }
-.filter-btn {
-  padding: 8px 16px; border-radius: 7px; border: 1px solid #d0dae6;
-  background: #fff; cursor: pointer; font-size: .83rem; font-weight: 600;
-  transition: all .15s;
-}
+.filter-btn { padding: 8px 16px; border-radius: 7px; border: 1px solid #d0dae6; background: #fff; cursor: pointer; font-size: .83rem; font-weight: 600; transition: all .15s; }
 .filter-btn.active { background: #1a3a5c; color: #fff; border-color: #1a3a5c; }
+.export-btn { display: inline-flex; align-items: center; gap: 6px; background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf; padding: 8px 16px; border-radius: 7px; font-size: .83rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.export-btn:hover { background: #d4efdf; }
 
-/* ── History ── */
 .hist-empty { color: #aaa; font-size: .9rem; padding: 8px 0; }
-.hist-item {
-  border: 1px solid #e0e7ef; border-radius: 9px;
-  padding: 14px 18px; margin-bottom: 10px;
-  cursor: pointer; transition: box-shadow .15s, border-color .15s;
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-}
+.hist-item { border: 1px solid #e0e7ef; border-radius: 9px; padding: 14px 18px; margin-bottom: 10px; cursor: pointer; transition: box-shadow .15s, border-color .15s; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .hist-item:hover { box-shadow: 0 2px 12px rgba(0,0,0,.09); border-color: #b0c4d8; }
 .hist-date { font-size: .75rem; color: #888; margin-bottom: 3px; }
 .hist-files { font-size: .85rem; font-weight: 500; }
 .hist-pills { display: flex; gap: 8px; }
-.pill {
-  padding: 3px 12px; border-radius: 20px;
-  font-size: .76rem; font-weight: 700; white-space: nowrap;
-}
+.pill { padding: 3px 12px; border-radius: 20px; font-size: .76rem; font-weight: 700; white-space: nowrap; }
 .pill.ok  { background: #eafaf1; color: #1e8449; }
 .pill.err { background: #fdecea; color: #c0392b; }
 
-/* ── Modal ── */
-.modal-overlay {
-  display: none; position: fixed; inset: 0;
-  background: rgba(0,0,0,.5); z-index: 200;
-  justify-content: center; align-items: center;
-}
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 200; justify-content: center; align-items: center; }
 .modal-overlay.open { display: flex; }
-.modal-box {
-  background: #fff; border-radius: 14px; padding: 30px;
-  max-width: 960px; width: 95%; max-height: 88vh;
-  overflow-y: auto; position: relative;
-}
-.modal-close {
-  position: absolute; top: 14px; right: 18px;
-  font-size: 1.4rem; cursor: pointer; color: #999;
-  background: none; border: none; line-height: 1;
-}
+.modal-box { background: #fff; border-radius: 14px; padding: 30px; max-width: 960px; width: 95%; max-height: 88vh; overflow-y: auto; position: relative; }
+.modal-close { position: absolute; top: 14px; right: 18px; font-size: 1.4rem; cursor: pointer; color: #999; background: none; border: none; line-height: 1; }
 .modal-close:hover { color: #333; }
 .modal-title { font-size: 1rem; color: #1a3a5c; font-weight: 600; margin-bottom: 18px; }
 
-/* ── Export btn ── */
-.export-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: #eafaf1; color: #1e8449; border: 1px solid #a9dfbf;
-  padding: 8px 16px; border-radius: 7px;
-  font-size: .83rem; font-weight: 600; cursor: pointer;
-  transition: background .15s;
-}
-.export-btn:hover { background: #d4efdf; }
+.info-box { background: #e8f4fd; border: 1px solid #bee3f8; border-radius: 8px; padding: 12px 16px; font-size: .82rem; color: #1a5276; margin-top: 8px; }
 
 @media (max-width: 640px) {
   .files-grid { grid-template-columns: 1fr; }
@@ -197,20 +142,38 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
     <div class="card-title">📂 Cargar archivos Excel</div>
     <div class="files-grid">
 
-      <div class="drop-zone" id="dz1" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'file1',this)">
-        <input type="file" id="file1" accept=".xlsx,.xls" onchange="onFile('file1','fname1','dz1')">
-        <div class="dz-icon">📊</div>
-        <div class="dz-tag">ARCHIVO BASE (1.2)</div>
-        <div class="dz-name" id="fname1">Haz clic o arrastra el archivo</div>
-        <div class="dz-cols">E·F·G = Nombre &nbsp;|&nbsp; J = RFC &nbsp;|&nbsp; K = CURP &nbsp;|&nbsp; DP = CLABE</div>
+      <div>
+        <div class="drop-zone" id="dz1" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'file1',this)">
+          <input type="file" id="file1" accept=".xlsx,.xls" onchange="onFile(1)">
+          <div class="dz-icon">📊</div>
+          <div class="dz-tag">ARCHIVO BASE (1.2)</div>
+          <div class="dz-name" id="fname1">Haz clic o arrastra el archivo</div>
+          <div class="dz-cols">E·F·G = Nombre &nbsp;|&nbsp; J = RFC &nbsp;|&nbsp; K = CURP &nbsp;|&nbsp; DP = CLABE</div>
+        </div>
+        <div class="file-config" id="cfg1">
+          <label>📑 Hoja del archivo:</label>
+          <select id="sheet1"></select>
+          <label>📌 Fila donde inician los datos (no el encabezado):</label>
+          <input type="number" id="startRow1" value="11" min="2">
+          <div class="info-box">ej: si los encabezados están en fila 10 y los datos en fila 11, escribe <strong>11</strong></div>
+        </div>
       </div>
 
-      <div class="drop-zone" id="dz2" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'file2',this)">
-        <input type="file" id="file2" accept=".xlsx,.xls" onchange="onFile('file2','fname2','dz2')">
-        <div class="dz-icon">📋</div>
-        <div class="dz-tag">ALTAS ADAGIO</div>
-        <div class="dz-name" id="fname2">Haz clic o arrastra el archivo</div>
-        <div class="dz-cols">D·E·F = Nombre &nbsp;|&nbsp; G = RFC &nbsp;|&nbsp; H = CURP &nbsp;|&nbsp; V = CLABE</div>
+      <div>
+        <div class="drop-zone" id="dz2" ondragover="onDrag(event,this)" ondragleave="offDrag(this)" ondrop="onDrop(event,'file2',this)">
+          <input type="file" id="file2" accept=".xlsx,.xls" onchange="onFile(2)">
+          <div class="dz-icon">📋</div>
+          <div class="dz-tag">ALTAS ADAGIO</div>
+          <div class="dz-name" id="fname2">Haz clic o arrastra el archivo</div>
+          <div class="dz-cols">D·E·F = Nombre &nbsp;|&nbsp; G = RFC &nbsp;|&nbsp; H = CURP &nbsp;|&nbsp; V = CLABE</div>
+        </div>
+        <div class="file-config" id="cfg2">
+          <label>📑 Hoja del archivo:</label>
+          <select id="sheet2"></select>
+          <label>📌 Fila donde inician los datos (no el encabezado):</label>
+          <input type="number" id="startRow2" value="2" min="2">
+          <div class="info-box">ej: si los encabezados están en fila 1 y los datos en fila 2, escribe <strong>2</strong></div>
+        </div>
       </div>
 
     </div>
@@ -229,7 +192,6 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
         <div class="stat s-ok">  <div class="num" id="sOk">0</div>   <div class="lbl">✓ Correctos</div></div>
         <div class="stat s-err"> <div class="num" id="sErr">0</div>  <div class="lbl">✗ Errores</div></div>
       </div>
-
       <div class="filter-bar">
         <input type="text" id="searchBox" placeholder="🔎 Buscar por nombre o RFC…" oninput="renderTable(currentRows)">
         <button class="filter-btn active" id="fb-all"  onclick="setFilter('all')">Todos</button>
@@ -237,20 +199,9 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
         <button class="filter-btn"        id="fb-err"  onclick="setFilter('err')">✗ Errores</button>
         <button class="export-btn" onclick="exportCSV(currentRows)">⬇ Exportar CSV</button>
       </div>
-
       <div class="tbl-wrap">
         <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre completo</th>
-              <th>RFC</th>
-              <th>CURP</th>
-              <th>CLABE</th>
-              <th>Estado</th>
-              <th>Detalle</th>
-            </tr>
-          </thead>
+          <thead><tr><th>#</th><th>Nombre completo</th><th>RFC</th><th>CURP</th><th>CLABE</th><th>Estado</th><th>Detalle</th></tr></thead>
           <tbody id="resTbody"></tbody>
         </table>
       </div>
@@ -259,16 +210,16 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
 
   <!-- ── History ── -->
   <div class="card">
-    <div class="card-title" style="justify-content:space-between">
+    <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
       <span>🕓 Historial de validaciones</span>
       <button class="btn secondary" style="padding:6px 14px;font-size:.78rem" onclick="clearHistory()">🗑 Limpiar</button>
     </div>
     <div id="histList"><p class="hist-empty">Sin registros aún.</p></div>
   </div>
 
-</div><!-- /container -->
+</div>
 
-<!-- ── Modal ── -->
+<!-- Modal -->
 <div class="modal-overlay" id="modal">
   <div class="modal-box">
     <button class="modal-close" onclick="closeModal()">✕</button>
@@ -280,9 +231,7 @@ tbody td { padding: 10px 14px; vertical-align: middle; }
     </div>
     <div class="tbl-wrap">
       <table>
-        <thead>
-          <tr><th>#</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>CLABE</th><th>Estado</th><th>Detalle</th></tr>
-        </thead>
+        <thead><tr><th>#</th><th>Nombre</th><th>RFC</th><th>CURP</th><th>CLABE</th><th>Estado</th><th>Detalle</th></tr></thead>
         <tbody id="modalTbody"></tbody>
       </table>
     </div>
@@ -296,8 +245,10 @@ const COL_ALTAS = { nombre:3, ap:4, am:5, rfc:6, curp:7, clabe:21  };
 
 let currentRows = [];
 let activeFilter = 'all';
+// Guardar workbooks en memoria para leer hoja correcta al validar
+let wb1 = null, wb2 = null;
 
-// ── Drag & drop helpers ─────────────────────────────────────────────────────
+// ── Drag & drop ─────────────────────────────────────────────────────────────
 function onDrag(e, el) { e.preventDefault(); el.classList.add('drag-over'); }
 function offDrag(el)   { el.classList.remove('drag-over'); }
 function onDrop(e, inputId, el) {
@@ -305,25 +256,34 @@ function onDrop(e, inputId, el) {
   const dt = e.dataTransfer;
   if (!dt.files.length) return;
   const inp = document.getElementById(inputId);
-  // Assign file to input via DataTransfer
   const transfer = new DataTransfer();
   transfer.items.add(dt.files[0]);
   inp.files = transfer.files;
   inp.dispatchEvent(new Event('change'));
 }
 
-function onFile(inputId, nameId, dzId) {
-  const f = document.getElementById(inputId).files[0];
-  const dz = document.getElementById(dzId);
-  const nm = document.getElementById(nameId);
-  if (f) {
-    nm.textContent = f.name;
-    dz.classList.add('has-file');
-    dz.classList.remove('drag-over');
-  } else {
-    nm.textContent = 'Haz clic o arrastra el archivo';
-    dz.classList.remove('has-file');
-  }
+async function onFile(n) {
+  const inp  = document.getElementById('file' + n);
+  const f    = inp.files[0];
+  const nm   = document.getElementById('fname' + n);
+  const dz   = document.getElementById('dz' + n);
+  const cfg  = document.getElementById('cfg' + n);
+  const sel  = document.getElementById('sheet' + n);
+
+  if (!f) { dz.classList.remove('has-file'); cfg.style.display='none'; checkBtn(); return; }
+
+  nm.textContent = f.name;
+  dz.classList.add('has-file');
+
+  // Leer workbook y poblar selector de hojas
+  const buf = await f.arrayBuffer();
+  const wb  = XLSX.read(buf, { type: 'array' });
+  if (n === 1) wb1 = wb; else wb2 = wb;
+
+  sel.innerHTML = wb.SheetNames.map(s =>
+    `<option value="${s}">${s}</option>`
+  ).join('');
+  cfg.style.display = 'block';
   checkBtn();
 }
 
@@ -333,96 +293,46 @@ function checkBtn() {
   document.getElementById('btnValidar').disabled = !ok;
 }
 
-// ── Read Excel ──────────────────────────────────────────────────────────────
-function readExcel(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = e => {
-      try {
-        const wb = XLSX.read(e.target.result, { type: 'array' });
-        const ws = wb.Sheets[wb.SheetNames[0]];
-        // header:1 → array of arrays; defval '' para celdas vacías
-        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
-        resolve(rows);
-      } catch(err) { reject(err); }
-    };
-    reader.onerror = reject;
-    reader.readAsArrayBuffer(file);
-  });
+// ── Read sheet ──────────────────────────────────────────────────────────────
+function getRows(wb, sheetName, startRow) {
+  const ws   = wb.Sheets[sheetName];
+  const all  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+  // startRow es 1-indexed; restamos 1 para 0-indexed
+  return all.slice(startRow - 1);
 }
 
 function cell(row, idx) {
   const v = row[idx];
-  return (v === undefined || v === null) ? '' : String(v).trim().toUpperCase();
+  if (v === undefined || v === null || v === '') return '';
+  // Limpiar apóstrofo inicial que Excel agrega a números como texto
+  return String(v).replace(/^'/, '').trim().toUpperCase();
 }
 
-// ── Diagnóstico: muestra qué se está leyendo ────────────────────────────────
-function mostrarDiagnostico(rows1, rows2) {
-  // Tomar primera fila de datos (índice 1)
-  const r1 = rows1[1] || [];
-  const r2 = rows2[1] || [];
-
-  const fmt = (row, cols) => Object.entries(cols).map(([k,i]) =>
-    `<tr><td style="padding:3px 10px;font-weight:600;color:#1a3a5c">${k.toUpperCase()}</td>` +
-    `<td style="padding:3px 10px;font-family:monospace">${row[i] ?? '<vacío>'}</td>` +
-    `<td style="padding:3px 8px;color:#aaa;font-size:.75rem">col ${i}</td></tr>`
-  ).join('');
-
-  const html = `
-    <div style="background:#fffbe6;border:1px solid #f0c040;border-radius:10px;padding:20px;margin-bottom:20px">
-      <div style="font-weight:700;color:#856404;margin-bottom:14px">⚠️ Panel de diagnóstico — primera fila leída de cada archivo</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
-        <div>
-          <div style="font-size:.8rem;font-weight:700;color:#555;margin-bottom:6px">📊 ARCHIVO BASE (1.2)</div>
-          <table style="border-collapse:collapse;font-size:.85rem">${fmt(r1, COL_BASE)}</table>
-        </div>
-        <div>
-          <div style="font-size:.8rem;font-weight:700;color:#555;margin-bottom:6px">📋 ALTAS ADAGIO</div>
-          <table style="border-collapse:collapse;font-size:.85rem">${fmt(r2, COL_ALTAS)}</table>
-        </div>
-      </div>
-      <div style="margin-top:12px;font-size:.8rem;color:#856404">
-        Si ves &lt;vacío&gt; o datos incorrectos, los índices de columna no corresponden a tu archivo.
-        Avísale a tu administrador para ajustar las columnas.
-      </div>
-    </div>`;
-
-  // Insertar antes de la tabla de resultados
-  const sec = document.getElementById('resultSection');
-  let diag = document.getElementById('diagPanel');
-  if (!diag) {
-    diag = document.createElement('div');
-    diag.id = 'diagPanel';
-    sec.querySelector('.card').insertAdjacentElement('afterbegin', diag);
-  }
-  diag.innerHTML = html;
-}
-
-// ── Main validation ─────────────────────────────────────────────────────────
+// ── Validación ──────────────────────────────────────────────────────────────
 async function validar() {
-  const f1 = document.getElementById('file1').files[0];
-  const f2 = document.getElementById('file2').files[0];
+  if (!wb1 || !wb2) { alert('Carga ambos archivos primero.'); return; }
+
+  const sheet1   = document.getElementById('sheet1').value;
+  const sheet2   = document.getElementById('sheet2').value;
+  const startRow1 = parseInt(document.getElementById('startRow1').value) || 11;
+  const startRow2 = parseInt(document.getElementById('startRow2').value) || 2;
 
   document.getElementById('btnValidar').disabled = true;
   document.getElementById('spinner').style.display = 'inline';
 
   try {
-    const [rows1, rows2] = await Promise.all([readExcel(f1), readExcel(f2)]);
+    const rows1 = getRows(wb1, sheet1, startRow1);
+    const rows2 = getRows(wb2, sheet2, startRow2);
 
-    // Mostrar diagnóstico de columnas
-    mostrarDiagnostico(rows1, rows2);
-
-    // Build index from base (skip header row 0)
+    // Construir índice por RFC desde archivo base
     const baseIdx = {};
-    for (let i = 1; i < rows1.length; i++) {
-      const r = rows1[i];
+    for (const r of rows1) {
       const rfc = cell(r, COL_BASE.rfc);
       if (rfc) baseIdx[rfc] = r;
     }
 
     const resultados = [];
-    for (let i = 1; i < rows2.length; i++) {
-      const r = rows2[i];
+    for (const r of rows2) {
       const rfc = cell(r, COL_ALTAS.rfc);
       if (!rfc) continue;
 
@@ -434,16 +344,12 @@ async function validar() {
       const fullName = [nombre, ap, am].filter(Boolean).join(' ');
 
       if (!baseIdx[rfc]) {
-        resultados.push({
-          nombre: fullName, rfc, curp_a: curp, clabe_a: clabe,
-          estado: 'ERROR',
-          errores: ['RFC no encontrado en archivo base'],
-          det: {}
-        });
+        resultados.push({ nombre: fullName, rfc, curp_a: curp, clabe_a: clabe,
+          estado: 'ERROR', errores: ['RFC no encontrado en archivo base'], det: {} });
         continue;
       }
 
-      const b = baseIdx[rfc];
+      const b     = baseIdx[rfc];
       const bAp   = cell(b, COL_BASE.ap);
       const bAm   = cell(b, COL_BASE.am);
       const bNom  = cell(b, COL_BASE.nombre);
@@ -463,19 +369,20 @@ async function validar() {
       if (!det.clabe.ok)  errores.push('CLABE no coincide');
 
       resultados.push({
-        nombre: fullName, rfc,
-        curp_a: curp, clabe_a: clabe,
+        nombre: fullName, rfc, curp_a: curp, clabe_a: clabe,
         estado: errores.length ? 'ERROR' : 'CORRECTO',
         errores, det
       });
     }
 
-    // Save to history
+    const f1name = document.getElementById('file1').files[0].name;
+    const f2name = document.getElementById('file2').files[0].name;
+
     const entry = {
       id: Date.now().toString(36),
       fecha: new Date().toLocaleString('es-MX'),
-      archivo_base: f1.name,
-      archivo_altas: f2.name,
+      archivo_base: f1name,
+      archivo_altas: f2name,
       total: resultados.length,
       correctos: resultados.filter(r => r.estado === 'CORRECTO').length,
       errores_cnt: resultados.filter(r => r.estado === 'ERROR').length,
@@ -494,23 +401,18 @@ async function validar() {
   }
 }
 
-// ── Render results ──────────────────────────────────────────────────────────
+// ── Render ──────────────────────────────────────────────────────────────────
 function showResults(entry) {
-  document.getElementById('resTitle').textContent =
-    `📋 Resultados — ${entry.fecha}`;
+  document.getElementById('resTitle').textContent = `📋 Resultados — ${entry.fecha}`;
   document.getElementById('sTotal').textContent = entry.total;
   document.getElementById('sOk').textContent    = entry.correctos;
   document.getElementById('sErr').textContent   = entry.errores_cnt;
-
   currentRows = entry.resultados;
   activeFilter = 'all';
-  ['all','ok','err'].forEach(f => {
-    document.getElementById('fb-' + f).classList.remove('active');
-  });
+  ['all','ok','err'].forEach(f => document.getElementById('fb-' + f).classList.remove('active'));
   document.getElementById('fb-all').classList.add('active');
   document.getElementById('searchBox').value = '';
   renderTable(currentRows);
-
   const sec = document.getElementById('resultSection');
   sec.style.display = 'block';
   sec.scrollIntoView({ behavior: 'smooth' });
@@ -518,9 +420,7 @@ function showResults(entry) {
 
 function setFilter(f) {
   activeFilter = f;
-  ['all','ok','err'].forEach(x =>
-    document.getElementById('fb-' + x).classList.remove('active')
-  );
+  ['all','ok','err'].forEach(x => document.getElementById('fb-' + x).classList.remove('active'));
   document.getElementById('fb-' + f).classList.add('active');
   renderTable(currentRows);
 }
@@ -531,97 +431,58 @@ function renderTable(rows, tbodyId = 'resTbody') {
   if (activeFilter === 'ok')  filtered = filtered.filter(r => r.estado === 'CORRECTO');
   if (activeFilter === 'err') filtered = filtered.filter(r => r.estado === 'ERROR');
   if (search) filtered = filtered.filter(r =>
-    r.nombre.includes(search) || r.rfc.includes(search)
-  );
+    r.nombre.includes(search) || r.rfc.includes(search));
 
   const tbody = document.getElementById(tbodyId);
   if (!filtered.length) {
     tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#aaa;padding:20px">Sin registros</td></tr>`;
     return;
   }
-
   tbody.innerHTML = filtered.map((r, i) => {
     const ok   = r.estado === 'CORRECTO';
     const d    = r.det || {};
     const nOk  = d.nombre ? d.nombre.ok : true;
     const cOk  = d.curp   ? d.curp.ok   : true;
     const clOk = d.clabe  ? d.clabe.ok  : true;
-
-    const tipCurp  = d.curp  && !d.curp.ok  ? ` title="Base: ${d.curp.b}"`  : '';
-    const tipClabe = d.clabe && !d.clabe.ok ? ` title="Base: ${d.clabe.b}"` : '';
-
-    const errDetail = ok ? '—' : r.errores.map(e =>
-      `<div class="err-item">⚠ ${e}</div>`
-    ).join('') + (d.nombre && !d.nombre.ok
-      ? `<div class="diff-val">Base: ${d.nombre.b}</div>` : '') +
-      (d.curp && !d.curp.ok
-        ? `<div class="diff-val">CURP base: ${d.curp.b}</div>` : '') +
-      (d.clabe && !d.clabe.ok
-        ? `<div class="diff-val">CLABE base: ${d.clabe.b}</div>` : '');
-
+    const errDetail = ok ? '—' : [
+      ...r.errores.map(e => `<div class="err-item">⚠ ${e}</div>`),
+      d.nombre && !d.nombre.ok ? `<div class="diff-val">Nombre base: ${d.nombre.b}</div>` : '',
+      d.curp   && !d.curp.ok   ? `<div class="diff-val">CURP base: ${d.curp.b}</div>`    : '',
+      d.clabe  && !d.clabe.ok  ? `<div class="diff-val">CLABE base: ${d.clabe.b}</div>`  : '',
+    ].join('');
     return `<tr>
-      <td>${i + 1}</td>
+      <td>${i+1}</td>
       <td class="${nOk  ? '' : 'cell-err'}">${r.nombre}</td>
       <td>${r.rfc}</td>
-      <td class="${cOk  ? '' : 'cell-err'}"${tipCurp}>${r.curp_a}</td>
-      <td class="${clOk ? '' : 'cell-err'}"${tipClabe}>${r.clabe_a}</td>
+      <td class="${cOk  ? '' : 'cell-err'}" title="${d.curp  ? 'Base: '+d.curp.b  : ''}">${r.curp_a}</td>
+      <td class="${clOk ? '' : 'cell-err'}" title="${d.clabe ? 'Base: '+d.clabe.b : ''}">${r.clabe_a}</td>
       <td><span class="badge ${ok ? 'ok' : 'err'}">${r.estado}</span></td>
       <td>${errDetail}</td>
     </tr>`;
   }).join('');
 }
 
-// ── Export CSV ──────────────────────────────────────────────────────────────
 function exportCSV(rows) {
-  const headers = ['#','Nombre','RFC','CURP','CLABE','Estado','Errores'];
-  const lines = [headers.join(',')];
-  rows.forEach((r, i) => {
-    lines.push([
-      i+1,
-      `"${r.nombre}"`,
-      r.rfc,
-      r.curp_a,
-      r.clabe_a,
-      r.estado,
-      `"${r.errores.join(' | ')}"`
-    ].join(','));
-  });
+  const lines = [['#','Nombre','RFC','CURP','CLABE','Estado','Errores'].join(',')];
+  rows.forEach((r, i) => lines.push([
+    i+1, `"${r.nombre}"`, r.rfc, r.curp_a, r.clabe_a,
+    r.estado, `"${r.errores.join(' | ')}"`
+  ].join(',')));
   const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = 'validacion.csv'; a.click();
-  URL.revokeObjectURL(url);
+  a.href = URL.createObjectURL(blob); a.download = 'validacion.csv'; a.click();
 }
 
-// ── History (localStorage) ──────────────────────────────────────────────────
+// ── History ──────────────────────────────────────────────────────────────────
 const HIST_KEY = 'migracion_historial';
-
-function getHistory() {
-  try { return JSON.parse(localStorage.getItem(HIST_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveHistory(entry) {
-  const hist = getHistory();
-  hist.unshift(entry);
-  // Mantener solo últimas 50 entradas
-  if (hist.length > 50) hist.splice(50);
-  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
-}
-
-function clearHistory() {
-  if (!confirm('¿Borrar todo el historial?')) return;
-  localStorage.removeItem(HIST_KEY);
-  renderHistory();
-}
+function getHistory()    { try { return JSON.parse(localStorage.getItem(HIST_KEY)||'[]'); } catch { return []; } }
+function saveHistory(e)  { const h = getHistory(); h.unshift(e); if (h.length>50) h.splice(50); localStorage.setItem(HIST_KEY, JSON.stringify(h)); }
+function clearHistory()  { if (!confirm('¿Borrar todo el historial?')) return; localStorage.removeItem(HIST_KEY); renderHistory(); }
 
 function renderHistory() {
   const hist = getHistory();
   const el = document.getElementById('histList');
-  if (!hist.length) {
-    el.innerHTML = '<p class="hist-empty">Sin registros aún.</p>';
-    return;
-  }
+  if (!hist.length) { el.innerHTML = '<p class="hist-empty">Sin registros aún.</p>'; return; }
   el.innerHTML = hist.map(h => `
     <div class="hist-item" onclick="openModal('${h.id}')">
       <div>
@@ -638,23 +499,16 @@ function renderHistory() {
 function openModal(id) {
   const entry = getHistory().find(h => h.id === id);
   if (!entry) return;
-  document.getElementById('modalTitle').textContent =
-    `${entry.fecha} — ${entry.archivo_altas}`;
-  document.getElementById('msTotal').textContent  = entry.total;
-  document.getElementById('msOk').textContent     = entry.correctos;
-  document.getElementById('msErr').textContent    = entry.errores_cnt;
+  document.getElementById('modalTitle').textContent = `${entry.fecha} — ${entry.archivo_altas}`;
+  document.getElementById('msTotal').textContent = entry.total;
+  document.getElementById('msOk').textContent    = entry.correctos;
+  document.getElementById('msErr').textContent   = entry.errores_cnt;
   renderTable(entry.resultados, 'modalTbody');
   document.getElementById('modal').classList.add('open');
 }
+function closeModal() { document.getElementById('modal').classList.remove('open'); }
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target===this) closeModal(); });
 
-function closeModal() {
-  document.getElementById('modal').classList.remove('open');
-}
-document.getElementById('modal').addEventListener('click', function(e) {
-  if (e.target === this) closeModal();
-});
-
-// Init
 renderHistory();
 </script>
 </body>
