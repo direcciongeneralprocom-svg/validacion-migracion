@@ -356,6 +356,48 @@ function cell(row, idx) {
   return (v === undefined || v === null) ? '' : String(v).trim().toUpperCase();
 }
 
+// ── Diagnóstico: muestra qué se está leyendo ────────────────────────────────
+function mostrarDiagnostico(rows1, rows2) {
+  // Tomar primera fila de datos (índice 1)
+  const r1 = rows1[1] || [];
+  const r2 = rows2[1] || [];
+
+  const fmt = (row, cols) => Object.entries(cols).map(([k,i]) =>
+    `<tr><td style="padding:3px 10px;font-weight:600;color:#1a3a5c">${k.toUpperCase()}</td>` +
+    `<td style="padding:3px 10px;font-family:monospace">${row[i] ?? '<vacío>'}</td>` +
+    `<td style="padding:3px 8px;color:#aaa;font-size:.75rem">col ${i}</td></tr>`
+  ).join('');
+
+  const html = `
+    <div style="background:#fffbe6;border:1px solid #f0c040;border-radius:10px;padding:20px;margin-bottom:20px">
+      <div style="font-weight:700;color:#856404;margin-bottom:14px">⚠️ Panel de diagnóstico — primera fila leída de cada archivo</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div style="font-size:.8rem;font-weight:700;color:#555;margin-bottom:6px">📊 ARCHIVO BASE (1.2)</div>
+          <table style="border-collapse:collapse;font-size:.85rem">${fmt(r1, COL_BASE)}</table>
+        </div>
+        <div>
+          <div style="font-size:.8rem;font-weight:700;color:#555;margin-bottom:6px">📋 ALTAS ADAGIO</div>
+          <table style="border-collapse:collapse;font-size:.85rem">${fmt(r2, COL_ALTAS)}</table>
+        </div>
+      </div>
+      <div style="margin-top:12px;font-size:.8rem;color:#856404">
+        Si ves &lt;vacío&gt; o datos incorrectos, los índices de columna no corresponden a tu archivo.
+        Avísale a tu administrador para ajustar las columnas.
+      </div>
+    </div>`;
+
+  // Insertar antes de la tabla de resultados
+  const sec = document.getElementById('resultSection');
+  let diag = document.getElementById('diagPanel');
+  if (!diag) {
+    diag = document.createElement('div');
+    diag.id = 'diagPanel';
+    sec.querySelector('.card').insertAdjacentElement('afterbegin', diag);
+  }
+  diag.innerHTML = html;
+}
+
 // ── Main validation ─────────────────────────────────────────────────────────
 async function validar() {
   const f1 = document.getElementById('file1').files[0];
@@ -366,6 +408,9 @@ async function validar() {
 
   try {
     const [rows1, rows2] = await Promise.all([readExcel(f1), readExcel(f2)]);
+
+    // Mostrar diagnóstico de columnas
+    mostrarDiagnostico(rows1, rows2);
 
     // Build index from base (skip header row 0)
     const baseIdx = {};
